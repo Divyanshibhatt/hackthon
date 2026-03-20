@@ -2,12 +2,12 @@
 from flask import Flask, request, jsonify
 from openai import OpenAI
 from localization_agent import translate_to_hindi
+from optimization_agent import analyze_and_optimize
 
 app = Flask(__name__)
 
-# Gemini setup
 client = OpenAI(
-    api_key="AIzaSyChJyrEqhPDv_qqwK_MGsmpZT2XfCApc2w",  
+    api_key="`AIzaSyChJyrEqhPDv_qqwK_MGsmpZT2XfCApc2w`",
     base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
 )
 
@@ -16,7 +16,6 @@ client = OpenAI(
 # -------------------------------
 def check_compliance(content):
     banned_words = ["guarantee", "instant results", "100% sure"]
-
     issues = []
 
     for word in banned_words:
@@ -37,14 +36,13 @@ def check_compliance(content):
 def home():
     return "Backend is running with Gemini!"
 
-# 🔹 FULL PIPELINE (BEST ROUTE)
+
 @app.route('/process', methods=['POST'])
 def process_content():
     data = request.json
     product_info = data.get("product_info", "")
 
     try:
-        # 1. Generate Content
         response = client.chat.completions.create(
             model="gemini-2.5-flash",
             messages=[
@@ -54,11 +52,7 @@ def process_content():
         )
 
         content = response.choices[0].message.content
-
-        # 2. Compliance Check
         issues = check_compliance(content)
-
-        # 3. Translation (Localization)
         hindi_translation = translate_to_hindi(content)
 
         return jsonify({
@@ -72,8 +66,25 @@ def process_content():
         return jsonify({"error": str(e)})
 
 
+# ✅ OPTIMIZE ROUTE (MOVE HERE)
+@app.route('/optimize', methods=['POST'])
+def optimize_content():
+    data = request.json
+    generated_content = data.get("generated_content", {})
+    product_info = data.get("product_info", "")
+
+    # Convert dict → text
+    if isinstance(generated_content, dict):
+        generated_content = "\n".join(
+            f"{k.upper()}:\n{v}" for k, v in generated_content.items()
+        )
+
+    report = analyze_and_optimize(generated_content, product_info)
+    return jsonify(report)
+
+
 # -------------------------------
-# Run App
+# Run App (ALWAYS LAST)
 # -------------------------------
 if __name__ == "__main__":
     app.run(debug=True)
