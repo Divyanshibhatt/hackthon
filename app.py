@@ -1,8 +1,7 @@
+from flask import Flask, request, jsonify
 from openai import OpenAI
 import json
 import re
-import os
-import argparse
 from datetime import datetime
 
 # -------------------------------
@@ -10,7 +9,7 @@ from datetime import datetime
 # -------------------------------
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key="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"
+    api_key="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" 
 )
 
 PRIMARY_MODEL = "openai/gpt-4o-mini"
@@ -55,9 +54,8 @@ def clean_text(text):
 # -------------------------------
 # 🤖 GENERATION
 # -------------------------------
-def generate_post(topic, mode, lang):
-    
-    # 🎯 Dynamic output structure
+def generate_post(topic, mode="professional", lang="both"):
+
     if lang == "english":
         output_fields = '"content": "string"'
     elif lang == "hinglish":
@@ -81,7 +79,6 @@ RULES:
 - Short paragraphs
 - 1–2 emojis max
 - Add 5–8 hashtags
-
 """
 
     if lang in ["hinglish", "both"]:
@@ -126,57 +123,34 @@ OUTPUT STRICT JSON:
     return final
 
 # -------------------------------
-# 📦 BATCH
+# 🌐 FLASK API
 # -------------------------------
-def generate_batch(topic, mode, lang, count):
-    results = []
-    for i in range(count):
-        print(f"⚡ Generating post {i+1}/{count}...")
-        results.append(generate_post(topic, mode, lang))
-    return results
+app = Flask(__name__)
 
-# -------------------------------
-# 💾 SAVE
-# -------------------------------
-def save_output(data):
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"linkedin_posts_{timestamp}.json"
+@app.route("/process", methods=["POST"])
+def process():
+    data = request.json
+    topic = data.get("topic")
 
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    if not topic:
+        return jsonify({"error": "No topic provided"}), 400
 
-    print(f"\n💾 Saved to {filename}")
+    try:
+        result = generate_post(topic)
 
-# -------------------------------
-# 🖥️ CLI
-# -------------------------------
-def main():
-    parser = argparse.ArgumentParser(description="LinkedIn AI Generator")
+        return jsonify({
+            "content": result.get("content", ""),
+            "hinglish": result.get("hinglish", ""),
+            "status": result.get("status", "Approved"),
+            "compliance_issues": result.get("compliance_issues", [])
+        })
 
-    parser.add_argument("--topic", type=str, help="Topic")
-    parser.add_argument("--mode", type=str, default="professional")
-    parser.add_argument("--lang", type=str, default="both", choices=["english", "hinglish", "both"])
-    parser.add_argument("--batch", type=int, default=1)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    args = parser.parse_args()
-
-    if not args.topic:
-        args.topic = input("Enter topic: ")
-
-    print("\n🚀 Generating content...\n")
-
-    if args.batch > 1:
-        results = generate_batch(args.topic, args.mode, args.lang, args.batch)
-    else:
-        results = generate_post(args.topic, args.mode, args.lang)
-
-    print("\n✅ OUTPUT:\n")
-    print(json.dumps(results, indent=2, ensure_ascii=False))
-
-    save_output(results)
 
 # -------------------------------
-# RUN
+# 🚀 RUN SERVER
 # -------------------------------
 if __name__ == "__main__":
-    main()
+    app.run(debug=True)
