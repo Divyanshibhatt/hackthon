@@ -35,19 +35,16 @@ def call_model(messages):
         )
 
 # -------------------------------
-# 🧹 CLEAN OUTPUT
+# 🧹 CLEANERS
 # -------------------------------
 def clean_output(text):
     return text.replace("```json", "").replace("```", "").strip()
 
 def extract_json(text):
-    try:
-        return json.loads(text)
-    except:
-        match = re.search(r'\{.*\}', text, re.DOTALL)
-        if match:
-            return json.loads(match.group())
-        raise ValueError("Invalid JSON")
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    if match:
+        return json.loads(match.group())
+    raise ValueError("Invalid JSON")
 
 def clean_text(text):
     if not text:
@@ -58,36 +55,52 @@ def clean_text(text):
 # -------------------------------
 # 🤖 GENERATION
 # -------------------------------
-def generate_post(topic, mode):
+def generate_post(topic, mode, lang):
+    
+    # 🎯 Dynamic output structure
+    if lang == "english":
+        output_fields = '"content": "string"'
+    elif lang == "hinglish":
+        output_fields = '"hinglish": "string"'
+    else:
+        output_fields = '''
+"content": "string",
+"hinglish": "string"
+'''
+
     prompt = f"""
 You are a professional LinkedIn content creator.
 
 TASK:
-1. Write a LinkedIn post about: {topic}
-2. Tone: {mode}
-3. Convert the SAME post into Hinglish
+Write a LinkedIn post about: {topic}
+Tone: {mode}
 
 RULES:
-
-ENGLISH:
 - Strong hook
 - Clean formatting
 - Short paragraphs
 - 1–2 emojis max
 - Add 5–8 hashtags
 
-HINGLISH:
+"""
+
+    if lang in ["hinglish", "both"]:
+        prompt += """
+Also convert the SAME post into Hinglish.
+
+HINGLISH RULES:
 - Natural Hinglish (like Indians speak)
 - Same meaning
-- No Devanagari
 - No weird spacing
+"""
+
+    prompt += f"""
 
 OUTPUT STRICT JSON:
 {{
   "status": "Approved",
   "compliance_issues": [],
-  "content": "string",
-  "hinglish": "string"
+  {output_fields}
 }}
 """
 
@@ -99,25 +112,31 @@ OUTPUT STRICT JSON:
     except:
         result = extract_json(raw)
 
-    return {
+    final = {
         "status": result.get("status", "Approved"),
-        "compliance_issues": result.get("compliance_issues", []),
-        "content": clean_text(result.get("content", "")),
-        "hinglish": clean_text(result.get("hinglish", "")),
+        "compliance_issues": result.get("compliance_issues", [])
     }
 
+    if "content" in result:
+        final["content"] = clean_text(result["content"])
+
+    if "hinglish" in result:
+        final["hinglish"] = clean_text(result["hinglish"])
+
+    return final
+
 # -------------------------------
-# 📦 BATCH GENERATION
+# 📦 BATCH
 # -------------------------------
-def generate_batch(topic, mode, count):
+def generate_batch(topic, mode, lang, count):
     results = []
     for i in range(count):
         print(f"⚡ Generating post {i+1}/{count}...")
-        results.append(generate_post(topic, mode))
+        results.append(generate_post(topic, mode, lang))
     return results
 
 # -------------------------------
-# 💾 SAVE OUTPUT
+# 💾 SAVE
 # -------------------------------
 def save_output(data):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -129,23 +148,27 @@ def save_output(data):
     print(f"\n💾 Saved to {filename}")
 
 # -------------------------------
-# 🖥️ CLI ENTRY
+# 🖥️ CLI
 # -------------------------------
 def main():
     parser = argparse.ArgumentParser(description="LinkedIn AI Generator")
 
-    parser.add_argument("--topic", type=str, required=True, help="Topic for post")
-    parser.add_argument("--mode", type=str, default="professional", help="Tone: viral/professional/casual")
-    parser.add_argument("--batch", type=int, default=1, help="Number of posts")
+    parser.add_argument("--topic", type=str, help="Topic")
+    parser.add_argument("--mode", type=str, default="professional")
+    parser.add_argument("--lang", type=str, default="both", choices=["english", "hinglish", "both"])
+    parser.add_argument("--batch", type=int, default=1)
 
     args = parser.parse_args()
+
+    if not args.topic:
+        args.topic = input("Enter topic: ")
 
     print("\n🚀 Generating content...\n")
 
     if args.batch > 1:
-        results = generate_batch(args.topic, args.mode, args.batch)
+        results = generate_batch(args.topic, args.mode, args.lang, args.batch)
     else:
-        results = generate_post(args.topic, args.mode)
+        results = generate_post(args.topic, args.mode, args.lang)
 
     print("\n✅ OUTPUT:\n")
     print(json.dumps(results, indent=2, ensure_ascii=False))
