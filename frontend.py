@@ -7,12 +7,12 @@ st.set_page_config(
     layout="centered"
 )
 
-# Custom peach background
+# Custom pastel green background
 st.markdown(
     """
     <style>
     .stApp {
-        background-color: #FFB07C;
+        background-color: #DFFFD6;
     }
     </style>
     """,
@@ -26,11 +26,11 @@ st.title("AI Content Lifecycle System")
 # Input Section
 # -------------------------
 
-st.header("Enter Product Information")
+st.header("Enter Topic for LinkedIn Post")
 
-product_info = st.text_area(
-    "Describe your product:",
-    height=150
+topic = st.text_input(
+    "Describe the topic:",
+    placeholder="Enter the topic for your LinkedIn post"
 )
 
 # -------------------------
@@ -39,30 +39,32 @@ product_info = st.text_area(
 
 if st.button("Generate Content"):
 
-    if product_info == "":
-        st.warning("Please enter product information")
+    if topic.strip() == "":
+        st.warning("Please enter a topic before generating content.")
 
     else:
         with st.spinner("Generating content..."):
 
             try:
-
                 response = requests.post(
                     "http://127.0.0.1:5000/process",
-                    json={
-                        "product_info": product_info
-                    }
+                    json={"topic": topic}
                 )
 
-                data = response.json()
+                if response.status_code == 200:
 
-                st.session_state["content"] = data["generated_content"]
-                st.session_state["translation"] = data["hindi_translation"]
-                st.session_state["status"] = data["status"]
-                st.session_state["issues"] = data["compliance_issues"]
+                    data = response.json()
 
-            except:
-                st.error("Backend not running")
+                    st.session_state["content"] = data["content"]
+                    st.session_state["hinglish"] = data["hinglish"]
+                    st.session_state["status"] = data["status"]
+                    st.session_state["issues"] = data["compliance_issues"]
+
+                else:
+                    st.error("Server error")
+
+            except Exception as e:
+                st.error(f"Backend error: {e}")
 
 # -------------------------
 # Show Results
@@ -72,9 +74,19 @@ if "content" in st.session_state:
 
     st.header("Generated Content")
 
+    st.subheader("English Post")
+
     st.text_area(
-        "Content",
+        "English Content",
         st.session_state["content"],
+        height=200
+    )
+
+    st.subheader("Hinglish Post")
+
+    st.text_area(
+        "Hinglish Content",
+        st.session_state["hinglish"],
         height=200
     )
 
@@ -85,44 +97,8 @@ if "content" in st.session_state:
     st.subheader("Compliance Issues")
 
     if len(st.session_state["issues"]) == 0:
-        st.write("No issues found")
+        st.write("No issues found.")
+
     else:
         for issue in st.session_state["issues"]:
-            st.write(issue)
-
-    st.subheader("Hindi Translation")
-
-    st.text_area(
-        "Translation",
-        st.session_state["translation"],
-        height=200
-    )
-
-# -------------------------
-# Optimize Content
-# -------------------------
-
-if "content" in st.session_state:
-
-    if st.button("Optimize Content"):
-
-        with st.spinner("Optimizing content..."):
-
-            try:
-
-                response = requests.post(
-                    "http://127.0.0.1:5000/optimize",
-                    json={
-                        "generated_content": st.session_state["content"],
-                        "product_info": product_info
-                    }
-                )
-
-                report = response.json()
-
-                st.header("Optimization Report")
-
-                st.json(report)
-
-            except:
-                st.error("Optimization failed")
+            st.write(f"- {issue}")
