@@ -8,16 +8,46 @@ st.set_page_config(
 )
 
 # Custom pastel green background
-st.markdown(
-    """
-    <style>
-    .stApp {
-        background-color: #DFFFD6;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown("""
+<style>
+
+/* Background */
+.stApp {
+    background-color: #F9FAFB !important;
+}
+
+/* Force all text to dark */
+html, body, [class*="css"] {
+    color: #1E1E1E !important;
+}
+
+/* Fix input boxes */
+input, textarea {
+    background-color: white !important;
+    color: black !important;
+    border-radius: 8px !important;
+}
+
+/* Fix text areas (your output boxes) */
+textarea {
+    background-color: white !important;
+    color: black !important;
+}
+
+/* Fix buttons */
+button {
+    background-color: #4CAF50 !important;
+    color: white !important;
+    border-radius: 8px !important;
+}
+
+/* Fix labels/headings visibility */
+h1, h2, h3, h4, h5, h6, label, p {
+    color: #1E1E1E !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 # Title
 st.title("AI Content Lifecycle System")
@@ -26,11 +56,11 @@ st.title("AI Content Lifecycle System")
 # Input Section
 # -------------------------
 
-st.header("Enter Topic for LinkedIn Post")
+st.header("Enter Topic ")
 
 topic = st.text_input(
     "Describe the topic:",
-    placeholder="Enter the topic for your LinkedIn post"
+    placeholder="Enter the topic "
 )
 
 # -------------------------
