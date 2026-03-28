@@ -1,14 +1,13 @@
 import streamlit as st
 from app import generate_batch
 
-# -------------------------------
-# ⚙️ PAGE CONFIG
-# -------------------------------
+
+# PAGE CONFIG
+
 st.set_page_config(page_title="AI Content System", layout="wide")
 
-# -------------------------------
-# 🎨 STYLING
-# -------------------------------
+
+#  STYLING
 st.markdown("""
 <style>
 html, body, [data-testid="stAppViewContainer"] {
@@ -35,9 +34,9 @@ textarea, input {
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------------------
-# 🖥️ UI
-# -------------------------------
+
+#  UI
+
 st.title("🚀 AI Content Lifecycle System")
 st.markdown("Generate, optimize & translate LinkedIn content instantly")
 st.markdown("---")
@@ -57,9 +56,9 @@ length = st.selectbox("📝 Post Length", ["short", "medium", "long"], key="leng
 
 generate_btn = st.button("✨ Generate Content")
 
-# -------------------------------
-# 🚀 OUTPUT
-# -------------------------------
+
+#  OUTPUT
+
 if generate_btn:
     if topic.strip() == "":
         st.warning("⚠️ Please enter a topic")
