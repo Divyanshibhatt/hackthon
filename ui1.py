@@ -1,5 +1,5 @@
 import streamlit as st
-from app import generate_batch
+from app import generate_post
 
 # -------------------------------
 # ⚙️ PAGE CONFIG
@@ -11,27 +11,64 @@ st.set_page_config(
 )
 
 # -------------------------------
-# 🎨 CSS
+# 🎨 CSS (UNCHANGED)
 # -------------------------------
 st.markdown("""
 <style>
+
+/* 🌈 Background */
 html, body, [data-testid="stAppViewContainer"] {
-    background: #ffffff !important;  /* white background */
+    background: linear-gradient(-45deg, #334155, #475569, #1e293b, #60a5fa);
+    background-size: 400% 400%;
+    animation: gradientMove 12s ease infinite;
 }
+
+/* ☀️ Light mode override */
+@media (prefers-color-scheme: light) {
+    html, body, [data-testid="stAppViewContainer"] {
+        background: #f8fafc !important;
+    }
+}
+
+/* Animation */
+@keyframes gradientMove {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+}
+
+/* 🔤 TEXT FIX */
+h1, h2, h3, h4, h5, h6, p, label, span {
+    color: #111827 !important;
+}
+
+/* 🧾 INPUTS */
 textarea, input {
-    background: #f9f9f9 !important;
+    background: #ffffff !important;
     color: #111827 !important;
     border-radius: 10px !important;
     padding: 10px !important;
 }
+
+/* 📦 RESULT CARD */
 .result-card {
     background: #ffffff !important;
     color: #111827 !important;
     padding: 20px;
     border-radius: 14px;
     margin-top: 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
 }
+
+/* 🔽 EXPANDER */
+details, summary {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-radius: 8px;
+    padding: 6px;
+}
+
+/* 🔘 BUTTON */
 .stButton > button {
     width: 100%;
     background: linear-gradient(90deg, #38bdf8, #6366f1);
@@ -39,6 +76,13 @@ textarea, input {
     border-radius: 10px;
     font-size: 16px;
 }
+
+/* Dropdown */
+div[data-baseweb="select"] > div {
+    background: #ffffff !important;
+    color: #111827 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -98,11 +142,11 @@ if generate_btn:
         st.warning("⚠️ Please enter a topic")
     else:
         with st.spinner("🤖 Agents are working..."):
-            results = generate_batch(topic, mode, lang, batch, length)
+            results = []
+            for _ in range(batch):
+                results.append(generate_post(topic, mode, lang, length))
 
         st.success("✅ Generated with Multi-Agent AI System")
-
-        all_text = ""
 
         for i, r in enumerate(results):
             st.markdown('<div class="result-card">', unsafe_allow_html=True)
@@ -110,7 +154,7 @@ if generate_btn:
             st.markdown(f"### 📄 Post {i+1}")
             st.markdown(f"**Status:** {r.get('status', 'Approved')}")
 
-            # English
+            # 📌 English
             if "content" in r:
                 with st.expander("📌 English"):
                     st.text_area(
@@ -120,9 +164,8 @@ if generate_btn:
                         key=f"eng_{i}",
                         label_visibility="collapsed"
                     )
-                    all_text += f"Post {i+1} (English)\n{r['content']}\n\n"
 
-            # Hinglish
+            # 📌 Hinglish (UPDATED HERE)
             if "hinglish" in r:
                 with st.expander("📌 Hinglish"):
                     st.text_area(
@@ -132,15 +175,8 @@ if generate_btn:
                         key=f"hing_{i}",
                         label_visibility="collapsed"
                     )
-                    all_text += f"Post {i+1} (Hinglish)\n{r['hinglish']}\n\n"
 
             st.markdown('</div>', unsafe_allow_html=True)
-
-        st.download_button(
-            "⬇️ Download All Posts",
-            all_text,
-            file_name="linkedin_posts.txt"
-        )
 
 # -------------------------------
 # 💡 FOOTER
