@@ -1,30 +1,54 @@
+# utils.py
+import os
 import json
 import re
-import os
 from openai import OpenAI
+from dotenv import load_dotenv
 
-# ⚠️ Make sure to set your API key here or via environment variable
-# Example: os.environ["OPENAI_API_KEY"] = "your_api_key_here"
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),  # must be set in environment
-    base_url="https://openrouter.ai/api/v1"  # optional if using OpenRouter
-)
+# -------------------------------
+# 🔑 LOAD ENV VARIABLES
+# -------------------------------
+load_dotenv()  # load .env file
+api_key = os.getenv("OPENAI_API_KEY")
 
+if not api_key:
+    raise ValueError("❌ OPENAI_API_KEY not found in .env")
+
+# -------------------------------
+# 🔗 OPENAI CLIENT
+# -------------------------------
+client = OpenAI(api_key=api_key)
+
+PRIMARY_MODEL = "openai/gpt-4o-mini"
+FALLBACK_MODEL = "openai/gpt-4o-mini:free"
+
+# -------------------------------
+# 🧠 MODEL CALL
+# -------------------------------
 def call_model(messages):
-    """Call the OpenAI chat model and return response"""
-    return client.chat.completions.create(
-        model="openai/gpt-4o-mini",
-        messages=messages
-    )
+    try:
+        return client.chat.completions.create(
+            model=PRIMARY_MODEL,
+            messages=messages,
+            temperature=0.6
+        )
+    except Exception:
+        return client.chat.completions.create(
+            model=FALLBACK_MODEL,
+            messages=messages,
+            temperature=0.6
+        )
 
-def clean_output(text):
-    """Remove ```json or ``` if present"""
+# -------------------------------
+# 🧹 CLEANERS
+# -------------------------------
+def clean_output(text: str) -> str:
+    """Remove markdown or code block wrappers from model output."""
     return text.replace("```json", "").replace("```", "").strip()
 
-def extract_json(text):
-    """Extract JSON from string and return as dict"""
+def extract_json(text: str) -> dict:
+    """Extract JSON object from string output."""
     match = re.search(r'\{.*\}', text, re.DOTALL)
     if match:
         return json.loads(match.group())
-    else:
-        raise ValueError("No JSON found in model output")
+    raise ValueError("Invalid JSON in model output")
