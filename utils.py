@@ -1,20 +1,30 @@
-import json, re, os
+import json
+import re
+import os
 from openai import OpenAI
 
+# ⚠️ Make sure to set your API key here or via environment variable
+# Example: os.environ["OPENAI_API_KEY"] = "your_api_key_here"
 client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key="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"
+    api_key=os.getenv("OPENAI_API_KEY"),  # must be set in environment
+    base_url="https://openrouter.ai/api/v1"  # optional if using OpenRouter
 )
 
 def call_model(messages):
+    """Call the OpenAI chat model and return response"""
     return client.chat.completions.create(
         model="openai/gpt-4o-mini",
         messages=messages
     )
 
 def clean_output(text):
+    """Remove ```json or ``` if present"""
     return text.replace("```json", "").replace("```", "").strip()
 
 def extract_json(text):
+    """Extract JSON from string and return as dict"""
     match = re.search(r'\{.*\}', text, re.DOTALL)
-    return json.loads(match.group())
+    if match:
+        return json.loads(match.group())
+    else:
+        raise ValueError("No JSON found in model output")
