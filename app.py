@@ -3,9 +3,7 @@ import re
 import os
 from openai import OpenAI
 
-# -------------------------------
-# 🔑 CONFIG
-# -------------------------------
+
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key="Place your api key here"  #use your own api key
@@ -14,9 +12,6 @@ client = OpenAI(
 PRIMARY_MODEL = "openai/gpt-4o-mini"
 FALLBACK_MODEL = "openai/gpt-4o-mini:free"
 
-# -------------------------------
-# 🧠 MODEL CALL
-# -------------------------------
 def call_model(messages):
     try:
         return client.chat.completions.create(
@@ -31,9 +26,6 @@ def call_model(messages):
             temperature=0.6
         )
 
-# -------------------------------
-# 🧹 CLEANERS
-# -------------------------------
 def clean_output(text):
     return text.replace("```json", "").replace("```", "").strip()
 
@@ -43,9 +35,6 @@ def extract_json(text):
         return json.loads(match.group())
     raise ValueError("Invalid JSON")
 
-# -------------------------------
-# 🤖 GENERATE POST
-# -------------------------------
 def generate_post(topic, mode="professional", lang="both", length="medium"):
 
     length_map = {
@@ -99,8 +88,6 @@ Return STRICT JSON:
 
     return result
 
-# -------------------------------
-# 🔁 BATCH
-# -------------------------------
+
 def generate_batch(topic, mode, lang, n, length):
     return [generate_post(topic, mode, lang, length) for _ in range(n)]
