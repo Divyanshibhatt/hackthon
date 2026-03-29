@@ -1,74 +1,33 @@
-import json
-import re
-import os
-from openai import OpenAI
-client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key="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"
-)
-PRIMARY_MODEL="openai/gpt-4o-mini"
-FALLBACK_MODEL="openai/gpt-4o-mini:free"
-def call_model(messages):
-    try:
-        return client.chat.completions.create(
-            model=PRIMARY_MODEL,
-            messages=messages,
-            temperature=0.6
-        )
-    except Exception:
-        return client.chat.completions.create(
-            model=FALLBACK_MODEL,
-            messages=messages,
-            temperature=0.6
-        )
-def clean_output(text):
-    return text.replace("```json","").replace("```","").strip()
-def extract_json(text):
-    match = re.search(r'\{.*\}', text,re.DOTALL)
-    if match:
-        return json.loads(match.group())
-    raise ValueError("Invalid JSON")
-def generate_post(topic,mode="professional",lang="both",length="medium"):
-    length_map = {
-        "short":"80-120 words",
-        "medium":"150-220 words",
-        "long":"250-350 words"
-    }
-    if lang=="english":
-        output_fields='"content":"string"'
-    elif lang=="hinglish":
-        output_fields='"hinglish":"string"'
-    else:
-        output_fields ='"content":"string","hinglish":"string"'
-    prompt = f"""
-You are a top LinkedIn content strategist.
-Write a HIGH-QUALITY LinkedIn post about: {topic}
+from agents import planner_agent, moderator_agent, translation_agent
 
-Tone: {mode}
-Length: {length_map[length]}
-
-Rules:
-- Strong hook
-- Short paragraphs
-- 1-2 emojis
-- Add 3-5 hashtags
-- Human tone
-"""
+def generate_post(topic, mode, lang, length):
+    """
+    Generate a single post using multi-agent workflow
+    Returns a dictionary with content, hinglish, status
+    """
+    # 1️⃣ Planner Agent
+    plan = planner_agent(topic, mode)
+    
+    # Combine hook + points into text
+    content_text = plan.get("hook", "") + "\n" + "\n".join(plan.get("points", []))
+    
+    # 2️⃣ Moderator Agent
+    moderated_text = moderator_agent(content_text)
+    
+    # 3️⃣ Translation Agent
+    hinglish_text = None
     if lang in ["hinglish", "both"]:
-        prompt +="\nAlso convert the SAME post into Hinglish.\n"
-    prompt +=f"""
-Return STRICT JSON:
-{{
-  "status": "Approved",
-  {output_fields}
-}}
-"""
-    response = call_model([{"role":"user","content":prompt}])
-    raw = clean_output(response.choices[0].message.content.strip())
-    try:
-        result = json.loads(raw)
-    except:
-        result = extract_json(raw)
-    return result
-def generate_batch(topic, mode, lang, n, length):
-    return [generate_post(topic, mode, lang, length) for _ in range(n)]
+        hinglish_text = translation_agent(moderated_text)
+    
+    return {
+        "content": moderated_text,
+        "hinglish": hinglish_text,
+        "status": "Approved"
+    }
+
+def generate_batch(topic, mode, lang, batch_size, length):
+    """Generate multiple posts"""
+    results = []
+    for _ in range(batch_size):
+        results.append(generate_post(topic, mode, lang, length))
+    return results
